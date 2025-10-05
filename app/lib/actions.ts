@@ -45,11 +45,19 @@ export async function createInvoice(formData: FormData) {
   const amountInCents = amount * 100;
   // 创建日期
   const date = new Date().toISOString().split('T')[0];
-  // 插入数据库
-  await sql`
-    INSERT INTO invoices (customer_id, amount, status, date)
-    VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
-  `;
+  try {
+    // 插入数据库
+    await sql`
+      INSERT INTO invoices (customer_id, amount, status, date)
+      VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+    `;
+  } catch (error) {
+    console.log(error, 'create')
+    return {
+      message: '创建invoice失败'
+    }
+  }
+  
   // Next.js 有一个客户端路由器缓存，可以将路由段存储在用户的浏览器中一段时间。除了预取之外，此缓存还确保用户可以在路由之间快速导航，同时减少向服务器发出的请求数量。
   // 插数据库中插入数据后，需要更新发票页面中的显示数据，这是为了清除缓存并触发对服务器的心情球
   revalidatePath('/dashboard/invoices');
@@ -66,12 +74,19 @@ export async function updateInvoice(id: string, formData: FormData) {
   });
 
   const amountInCents = amount * 100;
-
-  await sql`
+  try {
+    await sql`
     UPDATE invoices
     SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
     WHERE id = ${id}
   `;
+  } catch (error) {
+    console.log(error, "update")
+    return {
+      message: "更新invoice失败"
+    }
+  }
+  
 
   revalidatePath('/dashboard/invoices');
   redirect('/dashboard/invoices');
@@ -79,6 +94,15 @@ export async function updateInvoice(id: string, formData: FormData) {
 
 // 删除发票
 export async function deleteInvoice(id: string) {
-  await sql`DELETE FROM invoices WHERE id = ${id}`
+  throw new Error("删除失败")
+  // try {
+    await sql`DELETE FROM invoices WHERE id = ${id}`
+  // } catch (error) {
+  //   console.log(error, 'delete')
+  //   return {
+  //     message: "删除invoice失败"
+  //   }
+  // }
+  
   revalidatePath('/dashboard/invoices');
 }
