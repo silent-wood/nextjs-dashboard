@@ -9,16 +9,33 @@ const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require'});
 
 const FormSchema = z.object({
   id: z.string(),
-  customerId: z.string(),
-  amount: z.coerce.number(),
-  status: z.enum(['pending', 'paid']),
+  customerId: z.string({
+    invalid_type_error: '请选择一个创建人'
+  }),
+  amount: z.coerce.number().gt(0, {
+    message: "金额大于0"
+  }),
+  status: z.enum(['pending', 'paid'], {
+    invalid_type_error: "请选择状态"
+  }),
   date: z.string()
 })
 
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
-const UpdateInfoice = FormSchema.omit({ id: true, date: true })
+const UpdateInfoice = FormSchema.omit({ id: true, date: true });
+
+// 从 useActionState 钩子传递的状态
+export type State = {
+  errors?: {
+    customerId?: string[];
+    amount?: string[];
+    status?: string[];
+  };
+  message?: string | null;
+};
+
 // 创建发票
-export async function createInvoice(formData: FormData) {
+export async function createInvoice(prevState: State, formData: FormData) {
   // 从原数据中提取组装成普通对象
   // 1. 直接挨个取
   // const rawFormData = {
@@ -36,11 +53,18 @@ export async function createInvoice(formData: FormData) {
   // console.log(rawFormData)
 
   // 验证类型
-  const { customerId, amount, status } = CreateInvoice.parse({
+  const validatedFields = CreateInvoice.safeParse({
     customerId: formData.get('customerId'),
     amount: formData.get('amount'),
     status: formData.get('status')
   });
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "创建失败"
+    }
+  }
+  const { customerId, amount, status } = validatedFields.data;
   // 美元 -> 美分
   const amountInCents = amount * 100;
   // 创建日期
