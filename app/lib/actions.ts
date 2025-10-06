@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import postgres from 'postgres';
 import { redirect } from 'next/navigation';
+import { signIn } from '@/auth';
+import { AuthError } from 'next-auth';
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require'});
 
@@ -118,15 +120,33 @@ export async function updateInvoice(id: string, formData: FormData) {
 
 // 删除发票
 export async function deleteInvoice(id: string) {
-  throw new Error("删除失败")
-  // try {
+  try {
     await sql`DELETE FROM invoices WHERE id = ${id}`
-  // } catch (error) {
-  //   console.log(error, 'delete')
-  //   return {
-  //     message: "删除invoice失败"
-  //   }
-  // }
+  } catch (error) {
+    console.log(error, 'delete')
+    return {
+      message: "删除invoice失败"
+    }
+  }
   
   revalidatePath('/dashboard/invoices');
+}
+
+export async function authenticate(
+  prevState: string | undefined,
+  formData: FormData
+) {
+  try {
+    await signIn('credentials', formData)
+  } catch (error) {
+    if (error instanceof AuthError) {
+      switch(error.type) {
+        case "CredentialsSignin":
+          return "无效的凭证"
+        default:
+          return "出错了"
+      }
+    }
+    throw error
+  }
 }
