@@ -92,7 +92,7 @@ export async function createInvoice(prevState: State, formData: FormData) {
 }
 
 // 更新发票
-export async function updateInvoice(id: string, formData: FormData) {
+export async function updateInvoice(id: string, formData: FormData): Promise<void> {
   const { customerId, amount, status } = UpdateInfoice.parse({
     customerId: formData.get('customerId'),
     amount: formData.get('amount'),
@@ -108,9 +108,9 @@ export async function updateInvoice(id: string, formData: FormData) {
   `;
   } catch (error) {
     console.log(error, "update")
-    return {
+    return Promise.reject({
       message: "更新invoice失败"
-    }
+    })
   }
   
 
@@ -119,14 +119,14 @@ export async function updateInvoice(id: string, formData: FormData) {
 }
 
 // 删除发票
-export async function deleteInvoice(id: string) {
+export async function deleteInvoice(id: string): Promise<void> {
   try {
     await sql`DELETE FROM invoices WHERE id = ${id}`
   } catch (error) {
     console.log(error, 'delete')
-    return {
+    return Promise.reject({
       message: "删除invoice失败"
-    }
+    })
   }
   
   revalidatePath('/dashboard/invoices');
